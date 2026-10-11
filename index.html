@@ -50,7 +50,7 @@
       z-index: 1;
     }
 
-    /* 角色立繪層 (支援單角色與雙角色撲向動畫) */
+    /* 角色與演出層 */
     #character-layer {
       position: absolute;
       bottom: 0px;
@@ -72,7 +72,7 @@
       transition: opacity 0.6s ease-in-out;
     }
 
-    /* 旅館撲向大耳狗專屬動畫結構 */
+    /* 旅館撲向大耳狗專屬動畫 */
     .pounce-scene {
       position: relative;
       width: 100%;
@@ -113,6 +113,52 @@
       100% {
         transform: translate(160px, -20px) scale(1.08) rotate(6deg);
         opacity: 1;
+      }
+    }
+
+    /* 丸南吃生魚片看限動佈局 */
+    .story-reveal-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .story-char {
+      position: absolute;
+      left: 8%;
+      bottom: 0;
+      max-height: 98%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+    }
+
+    .story-card-wrapper {
+      position: absolute;
+      right: 12%;
+      top: 8%;
+      height: 78%;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 255, 255, 0.2);
+      animation: storyPopIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    }
+
+    .story-card-wrapper img {
+      height: 100%;
+      width: auto;
+      display: block;
+    }
+
+    @keyframes storyPopIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.6) rotate(-5deg);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
       }
     }
 
@@ -931,40 +977,40 @@
         nextNode: "event2_start"
       },
 
-      // --- 事件二 ---
+      // --- 事件二 (更新：丸南生魚片與限動截圖) ---
       event2_start: {
         speaker: "隔壁老王",
-        text: "直到那一天的到來……",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        text: "直到某一天我跟朋友去吃丸南生魚片的時候，看到了大耳狗的限時動態",
+        bg: "assets/wannan.jpg",
+        character: "assets/laowang_hoodie.png",
         nextNode: "event2_reconcile"
       },
       event2_reconcile: {
         speaker: "隔壁老王",
         text: "她跟男友大吵一架後，居然神速和好，還發了甜蜜合照的限時動態。",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/wannan.jpg",
+        storyReveal: true, // 顯示帽踢老王 + 旁邊彈出限動截圖
         nextNode: "event2_caption"
       },
       event2_caption: {
         speaker: "大耳狗的限動",
-        text: "「雨過天晴，謝謝你包容我的小脾氣，我們會一直好好的❤️」",
-        bg: "assets/room.jpg",
-        character: null,
+        text: "「謝謝你包容我的小脾氣，我們會一直好好的❤️❤️」",
+        bg: "assets/wannan.jpg",
+        storyReveal: true,
         nextNode: "event2_confused"
       },
       event2_confused: {
         speaker: "隔壁老王",
         text: "……蛤？？？前幾天在床上還抱得那麼緊，今天就跟男友放閃？？",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/wannan.jpg",
+        character: "assets/laowang_cry.png", // 老王痛哭流涕表情
         nextNode: "event2_bear_prompt"
       },
       event2_bear_prompt: {
         speaker: "隔壁老王",
         text: "心態徹底炸裂的我，氣得打開交友軟體找人療傷。",
         bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        character: "assets/laowang_cry.png",
         nextNode: "event2_bear_msg"
       },
       event2_bear_msg: {
@@ -1389,8 +1435,19 @@
         bgLayer.style.opacity = "0";
       }
 
-      // 判斷是否為撲向大耳狗的雙角色動畫
-      if (node.pounceScene) {
+      // 畫面立繪/演出邏輯分支
+      if (node.storyReveal) {
+        // 丸南生魚片：帽踢老王 + 旁邊彈出限動截圖
+        charLayer.innerHTML = `
+          <div class="story-reveal-scene">
+            <img class="story-char" src="assets/laowang_hoodie.png" alt="隔壁老王">
+            <div class="story-card-wrapper">
+              <img src="assets/dumbo_story.jpg" alt="大耳狗限時動態">
+            </div>
+          </div>
+        `;
+      } else if (node.pounceScene) {
+        // 旅館：老王撲向大耳狗動畫
         charLayer.innerHTML = `
           <div class="pounce-scene">
             <img class="pounce-target" src="assets/dumbo.png" alt="大耳狗">
@@ -1398,6 +1455,7 @@
           </div>
         `;
       } else if (node.character) {
+        // 單立繪正常淡入
         charLayer.innerHTML = `<img class="single-char" src="${node.character}" alt="角色立繪">`;
         const img = charLayer.querySelector(".single-char");
         if (img) img.style.opacity = "1";
