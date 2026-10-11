@@ -50,7 +50,7 @@
       z-index: 1;
     }
 
-    /* 角色與演出層 */
+    /* 角色立繪與複雜同屏層 */
     #character-layer {
       position: absolute;
       bottom: 0px;
@@ -69,7 +69,13 @@
       object-fit: contain;
       filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
       opacity: 0;
-      transition: opacity 0.6s ease-in-out;
+      transition: opacity 0.6s ease-in-out, transform 0.4s ease-out;
+    }
+
+    /* 人物特寫放大 */
+    .char-zoom {
+      transform: scale(1.35) translateY(-5%);
+      transform-origin: bottom center;
     }
 
     /* 旅館撲向大耳狗專屬動畫 */
@@ -107,16 +113,14 @@
         transform: translate(-150px, 40px) scale(0.9) rotate(-10deg);
         opacity: 0;
       }
-      50% {
-        opacity: 1;
-      }
+      50% { opacity: 1; }
       100% {
         transform: translate(160px, -20px) scale(1.08) rotate(6deg);
         opacity: 1;
       }
     }
 
-    /* 丸南吃生魚片看限動佈局 */
+    /* 丸南吃生魚片彈出限動場景 */
     .story-reveal-scene {
       position: relative;
       width: 100%;
@@ -137,8 +141,8 @@
     .story-card-wrapper {
       position: absolute;
       right: 12%;
-      top: 8%;
-      height: 78%;
+      top: 6%;
+      height: 82%;
       border-radius: 20px;
       overflow: hidden;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 255, 255, 0.2);
@@ -160,6 +164,43 @@
         opacity: 1;
         transform: scale(1) rotate(0deg);
       }
+    }
+
+    /* 哭臉老王 + 旁邊彈出熊男訊息截圖 */
+    .bear-msg-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .bear-scene-char {
+      position: absolute;
+      left: 4%;
+      bottom: 0;
+      max-height: 105%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+      transform: scale(1.15);
+      transform-origin: bottom center;
+    }
+
+    .bear-card-wrapper {
+      position: absolute;
+      right: 14%;
+      top: 8%;
+      height: 80%;
+      border-radius: 26px;
+      overflow: hidden;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.85), 0 0 0 3px #222;
+      animation: storyPopIn 0.45s ease-out forwards;
+    }
+
+    .bear-card-wrapper img {
+      height: 100%;
+      width: auto;
+      display: block;
     }
 
     .overlay-screen {
@@ -977,7 +1018,7 @@
         nextNode: "event2_start"
       },
 
-      // --- 事件二 (更新：丸南生魚片與限動截圖) ---
+      // --- 事件二 (丸南生魚片與熊男戰鬥冰) ---
       event2_start: {
         speaker: "隔壁老王",
         text: "直到某一天我跟朋友去吃丸南生魚片的時候，看到了大耳狗的限時動態",
@@ -989,7 +1030,7 @@
         speaker: "隔壁老王",
         text: "她跟男友大吵一架後，居然神速和好，還發了甜蜜合照的限時動態。",
         bg: "assets/wannan.jpg",
-        storyReveal: true, // 顯示帽踢老王 + 旁邊彈出限動截圖
+        storyReveal: true,
         nextNode: "event2_caption"
       },
       event2_caption: {
@@ -1003,34 +1044,35 @@
         speaker: "隔壁老王",
         text: "……蛤？？？前幾天在床上還抱得那麼緊，今天就跟男友放閃？？",
         bg: "assets/wannan.jpg",
-        character: "assets/laowang_cry.png", // 老王痛哭流涕表情
+        character: "assets/laowang_cry.png",
         nextNode: "event2_bear_prompt"
       },
       event2_bear_prompt: {
         speaker: "隔壁老王",
         text: "心態徹底炸裂的我，氣得打開交友軟體找人療傷。",
-        bg: "assets/room.jpg",
+        bg: "assets/wannan.jpg",
         character: "assets/laowang_cry.png",
+        charZoom: true, // 放大特寫老王哭臉
         nextNode: "event2_bear_msg"
       },
       event2_bear_msg: {
         speaker: "178 特級亞大熊男",
         text: "「寶寶，你終於肯理我了！想吃什麼？我都請你！」",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/wannan.jpg",
+        bearMsgScene: true, // 哭臉老王 + 旁邊熊男 Grindr 訊息卡
         nextNode: "event2_ice_shop"
       },
       event2_ice_shop: {
         speaker: "隔壁老王",
         text: "「走，去吃戰鬥冰。」",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/wannan.jpg",
+        bearMsgScene: true, // 延續丸南背景與熊男訊息畫面
         nextNode: "event2_ice_eating"
       },
       event2_ice_eating: {
         speaker: "隔壁老王",
         text: "在戰鬥冰的店裡，熊男溫柔地幫我挖著芒果，用深情的眼神看著滿腹委屈的我……",
-        bg: "assets/room.jpg",
+        bg: "assets/zhandoubing.jpg", // 戰鬥冰古早味綿綿冰背景
         character: null,
         choices: [
           { text: "我還是放不下大耳狗", nextNode: "event3_start" },
@@ -1040,14 +1082,14 @@
       special_end_bear: {
         speaker: "隔壁老王",
         text: "大耳狗算什麼？眼前的 178 特級亞大熊男寬厚又體貼，還會餵我吃戰鬥冰。",
-        bg: "assets/room.jpg",
+        bg: "assets/zhandoubing.jpg",
         character: null,
         nextNode: "special_end_bear_2"
       },
       special_end_bear_2: {
         speaker: "178 特級亞大熊男",
         text: "「寶寶，以後你的下半生，交給我來照顧。」",
-        bg: "assets/room.jpg",
+        bg: "assets/zhandoubing.jpg",
         character: null,
         nextNode: "special_end_bear_3"
       },
@@ -1435,9 +1477,9 @@
         bgLayer.style.opacity = "0";
       }
 
-      // 畫面立繪/演出邏輯分支
+      // 演出模式分流
       if (node.storyReveal) {
-        // 丸南生魚片：帽踢老王 + 旁邊彈出限動截圖
+        // 丸南生魚片：老王 + 旁邊彈出限動卡片
         charLayer.innerHTML = `
           <div class="story-reveal-scene">
             <img class="story-char" src="assets/laowang_hoodie.png" alt="隔壁老王">
@@ -1446,8 +1488,18 @@
             </div>
           </div>
         `;
+      } else if (node.bearMsgScene) {
+        // 丸南生魚片：哭臉老王 + 旁邊彈出熊男 Grindr 訊息卡片
+        charLayer.innerHTML = `
+          <div class="bear-msg-scene">
+            <img class="bear-scene-char" src="assets/laowang_cry.png" alt="哭臉老王">
+            <div class="bear-card-wrapper">
+              <img src="assets/bear_msg.png" alt="熊男訊息">
+            </div>
+          </div>
+        `;
       } else if (node.pounceScene) {
-        // 旅館：老王撲向大耳狗動畫
+        // 旅館：老王撲向大耳狗
         charLayer.innerHTML = `
           <div class="pounce-scene">
             <img class="pounce-target" src="assets/dumbo.png" alt="大耳狗">
@@ -1455,8 +1507,9 @@
           </div>
         `;
       } else if (node.character) {
-        // 單立繪正常淡入
-        charLayer.innerHTML = `<img class="single-char" src="${node.character}" alt="角色立繪">`;
+        // 單立繪（支援 zoom 特寫放大）
+        const zoomClass = node.charZoom ? "char-zoom" : "";
+        charLayer.innerHTML = `<img class="single-char ${zoomClass}" src="${node.character}" alt="角色立繪">`;
         const img = charLayer.querySelector(".single-char");
         if (img) img.style.opacity = "1";
       } else {
@@ -1668,7 +1721,7 @@
       const node = storyScript[currentNodeKey];
       if (isTyping) {
         completeTextInstantly();
-      } else if (node.nextNode && (!node.choices || node.choices.length === 0) && !node.requirePhoneClick) {
+      } else if (node.nextNode && (!node.choices || node.choices.length === 0)) {
         renderNode(node.nextNode);
       }
     });
