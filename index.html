@@ -1154,22 +1154,22 @@
         speaker: "隔壁老王",
         text: "大耳狗算什麼？眼前的 178 特級亞大熊男寬厚又體貼，還會餵我吃戰鬥冰。",
         bg: "assets/zhandoubing.jpg",
-        duoIceScene: true, // 哭臉老王與熊男同屏對戲
+        duoIceScene: true,
         nextNode: "special_end_bear_2"
       },
       special_end_bear_2: {
         speaker: "178 特級亞大熊男",
         text: "「寶寶，以後你的下半生，交給我來照顧。」",
         bg: "assets/zhandoubing.jpg",
-        hugScene: true, // 熊男深情環抱老王
-        onEnter: () => playBgm(bearBgmPlayer), // 播放「要愛愛」BGM
+        hugScene: true,
+        onEnter: () => playBgm(bearBgmPlayer),
         nextNode: "special_end_bear_3"
       },
       special_end_bear_3: {
         speaker: "系統",
         text: "【特殊結局：跟熊男交往 被開發成騷0】\n那一夜，老王放下了偷家的執念，在大熊溫暖的懷抱中找到了全新自我。",
         bg: "assets/zhandoubing.jpg",
-        hugScene: true, // 延續環抱畫面
+        hugScene: true,
         unlockAchievement: "achieve_bear_sub",
         onNext: () => returnToMenu()
       },
@@ -1553,14 +1553,12 @@
 
       // 演出模式分流
       if (node.hugScene) {
-        // 熊男背後深情擁抱哭臉老王
         charLayer.innerHTML = `
           <div class="hug-scene">
             <img class="hug-char" src="assets/bear_hug_laowang.png" alt="熊男抱住老王">
           </div>
         `;
       } else if (node.duoIceScene) {
-        // 戰鬥冰店：哭臉老王與熊男同台
         charLayer.innerHTML = `
           <div class="duo-ice-scene">
             <img class="duo-laowang" src="assets/laowang_cry.png" alt="哭臉老王">
@@ -1568,7 +1566,6 @@
           </div>
         `;
       } else if (node.storyReveal) {
-        // 丸南生魚片：老王 + 限動卡片
         charLayer.innerHTML = `
           <div class="story-reveal-scene">
             <img class="story-char" src="assets/laowang_hoodie.png" alt="隔壁老王">
@@ -1578,7 +1575,6 @@
           </div>
         `;
       } else if (node.bearMsgScene) {
-        // 丸南生魚片：哭臉老王 + 熊男 Grindr 訊息卡片
         charLayer.innerHTML = `
           <div class="bear-msg-scene">
             <img class="bear-scene-char" src="assets/laowang_cry.png" alt="哭臉老王">
@@ -1588,7 +1584,6 @@
           </div>
         `;
       } else if (node.pounceScene) {
-        // 旅館：老王撲向大耳狗
         charLayer.innerHTML = `
           <div class="pounce-scene">
             <img class="pounce-target" src="assets/dumbo.png" alt="大耳狗">
@@ -1596,7 +1591,6 @@
           </div>
         `;
       } else if (node.character) {
-        // 單立繪（支援 zoom 特寫放大）
         const zoomClass = node.charZoom ? "char-zoom" : "";
         charLayer.innerHTML = `<img class="single-char ${zoomClass}" src="${node.character}" alt="角色立繪">`;
         const img = charLayer.querySelector(".single-char");
@@ -1653,6 +1647,7 @@
       clearInterval(typeTimer);
       clearTimeout(cutsceneTimer);
       isTyping = false;
+      stopRightKeySkip();
       stopBgmInstant();
       cutsceneLayer.classList.add("hidden");
       phoneInteractiveLayer.classList.remove("active");
@@ -1776,43 +1771,85 @@
       goBack();
     });
 
-    dialogueBox.addEventListener("click", () => {
+    // ===== 推進核心與鍵盤方向鍵右鍵監聽 =====
+    function advanceDialogue() {
+      if (!startMenu.classList.contains("hidden") || !achieveScreen.classList.contains("hidden")) {
+        return;
+      }
+
+      if (!cutsceneLayer.classList.contains("hidden")) {
+        clearTimeout(cutsceneTimer);
+        cutsceneLayer.classList.add("hidden");
+        planeSprite.classList.remove("anim-plane-landing");
+        renderNode("intro_1", false);
+        return;
+      }
+
       const node = storyScript[currentNodeKey];
+      if (!node) return;
+
+      if ((node.choices && node.choices.length > 0) || node.requirePhoneClick) {
+        stopRightKeySkip();
+        return;
+      }
 
       if (isTyping) {
         completeTextInstantly();
         return;
       }
-
-      if (node.requirePhoneClick) {
-        return;
-      }
-
-      if (node.choices && node.choices.length > 0) return;
 
       if (node.onNext) {
         node.onNext();
       } else if (node.nextNode) {
         renderNode(node.nextNode);
       }
+    }
+
+    let rightKeyHoldTimeout = null;
+    let rightKeyFastSkipInterval = null;
+    let isRightKeyPressed = false;
+
+    function stopRightKeySkip() {
+      clearTimeout(rightKeyHoldTimeout);
+      clearInterval(rightKeyFastSkipInterval);
+      rightKeyHoldTimeout = null;
+      rightKeyFastSkipInterval = null;
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.code === "ArrowRight") {
+        e.preventDefault();
+
+        if (isRightKeyPressed) return;
+        isRightKeyPressed = true;
+
+        advanceDialogue();
+
+        rightKeyHoldTimeout = setTimeout(() => {
+          rightKeyFastSkipInterval = setInterval(() => {
+            advanceDialogue();
+          }, 70);
+        }, 300);
+      }
     });
+
+    window.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowRight" || e.code === "ArrowRight") {
+        isRightKeyPressed = false;
+        stopRightKeySkip();
+      }
+    });
+
+    window.addEventListener("blur", () => {
+      isRightKeyPressed = false;
+      stopRightKeySkip();
+    });
+
+    dialogueBox.addEventListener("click", advanceDialogue);
 
     skipBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-
-      if (!cutsceneLayer.classList.contains("hidden")) {
-        clearTimeout(cutsceneTimer);
-        cutsceneLayer.classList.add("hidden");
-        renderNode("intro_1", false);
-        return;
-      }
-
-      const node = storyScript[currentNodeKey];
-      if (isTyping) {
-        completeTextInstantly();
-      } else if (node.nextNode && (!node.choices || node.choices.length === 0)) {
-        renderNode(node.nextNode);
-      }
+      advanceDialogue();
     });
   </script>
 </body>
