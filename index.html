@@ -44,13 +44,13 @@
       width: 100%;
       height: 100%;
       background-size: cover;
-      background-position: center;
+      background-position: center center; /* 自動置中縮放 */
       opacity: 0;
       transition: opacity 0.8s ease-in-out;
       z-index: 1;
     }
 
-    /* 角色立繪層 */
+    /* 角色立繪與複雜同屏層 */
     #character-layer {
       position: absolute;
       bottom: 0px;
@@ -72,7 +72,6 @@
       transition: opacity 0.6s ease-in-out, transform 0.4s ease-out;
     }
 
-    /* 人物特寫放大 */
     .char-zoom {
       transform: scale(1.35) translateY(-5%);
       transform-origin: bottom center;
@@ -203,7 +202,7 @@
       display: block;
     }
 
-    /* 戰鬥冰店：修正人物重疊（熊男靠左，老王強制推至右側） */
+    /* 戰鬥冰店：修正重疊（熊男靠左，老王強制推至右側） */
     .duo-ice-scene {
       position: relative;
       width: 100%;
@@ -279,6 +278,74 @@
     @keyframes catAngerShake {
       0% { transform: scale(1) rotate(-1deg); }
       100% { transform: scale(1.03) rotate(1.5deg); }
+    }
+
+    /* 醉酒電話彈出訊息截圖場景 (支援同時放灰衣老王) */
+    .drunk-phone-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .drunk-phone-card {
+      position: absolute;
+      top: 6%;
+      height: 85%;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.9), 0 0 0 3px rgba(255, 255, 255, 0.3);
+      animation: storyPopIn 0.4s ease-out forwards;
+      z-index: 5;
+    }
+
+    .drunk-phone-card img {
+      height: 100%;
+      width: auto;
+      display: block;
+    }
+
+    .drunk-char-left {
+      position: absolute;
+      left: 4%;
+      bottom: 0;
+      max-height: 95%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+      animation: fadeInChar 0.5s ease-out forwards;
+      z-index: 4;
+    }
+
+    /* 酸菜魚同台：支援 2~4 人發言高亮動態放大縮小 */
+    .group-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      padding: 0 10px;
+    }
+
+    .group-char {
+      max-height: 88%;
+      max-width: 26%;
+      object-fit: contain;
+      transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)) brightness(0.8);
+      opacity: 0.85;
+      transform-origin: bottom center;
+    }
+
+    /* 說話者高亮放大 */
+    .group-char.speaker-active {
+      max-height: 96%;
+      filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.8)) brightness(1.05);
+      opacity: 1;
+      transform: scale(1.15) translateY(-8px);
+      z-index: 10;
     }
 
     @keyframes fadeInChar {
@@ -1198,7 +1265,7 @@
         speaker: "隔壁老王",
         text: "大耳狗算什麼？眼前的 178 特級亞大熊男寬厚又體貼，還會餵我吃戰鬥冰。",
         bg: "assets/zhandoubing.jpg",
-        duoIceSceneCry: true, // 熊男在左、哭臉老王靠右 (徹底錯開不重疊)
+        duoIceSceneCry: true, // 熊男靠左、哭臉老王靠右 (徹底錯開)
         nextNode: "special_end_bear_2"
       },
       special_end_bear_2: {
@@ -1223,7 +1290,7 @@
         speaker: "隔壁老王",
         text: "不行，把輸家當早餐吃的我，絕不能在戰鬥冰店認輸！",
         bg: "assets/zhandoubing.jpg",
-        duoIceSceneHoodie: true, // 熊男在左、灰衣老王靠右
+        duoIceSceneHoodie: true, // 熊男靠左、灰衣老王靠右
         nextNode: "event3_movie_msg"
       },
       event3_movie_msg: {
@@ -1273,18 +1340,18 @@
         onNext: () => returnToMenu()
       },
 
-      // --- 事件四 ---
+      // --- 事件四：床上睡覺視角、未接來電彈出、灰衣老王 ---
       event4_start: {
         speaker: "隔壁老王",
         text: "電影散場後的那個週末，凌晨兩點。",
-        bg: "assets/room.jpg",
+        bg: "assets/bedroom_sleep.jpg", // 床上睡覺背景
         character: null,
         nextNode: "event4_vibe"
       },
       event4_vibe: {
         speaker: "隔壁老王",
         text: "手機在床頭瘋狂震動，螢幕亮起大耳狗的名字。",
-        bg: "assets/room.jpg",
+        bg: "assets/bedroom_sleep.jpg",
         character: null,
         onEnter: () => playPhoneVibrateSound(),
         nextNode: "event4_drunk1"
@@ -1292,23 +1359,23 @@
       event4_drunk1: {
         speaker: "大耳狗",
         text: "「老王……你睡了嗎？我剛跟朋友喝完酒……現在腦子裡全是你。」",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/bedroom_sleep.jpg",
+        drunkPhoneScene: true, // 彈出 123.jpg 通知截圖
         onEnter: () => playBgm(bgmPlayer),
         nextNode: "event4_drunk2"
       },
       event4_drunk2: {
         speaker: "大耳狗",
         text: "「我好想你……」",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/bedroom_sleep.jpg",
+        drunkPhoneScene: true,
         nextNode: "event4_drunk3"
       },
       event4_drunk3: {
         speaker: "大耳狗",
         text: "「我承認……我喝醉那天，我也動搖了。」",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/bedroom_sleep.jpg",
+        drunkPhoneScene: true,
         nextNode: "ch5_together"
       },
 
@@ -1316,64 +1383,78 @@
       ch5_together: {
         speaker: "隔壁老王",
         text: "那通醉醺醺的電話，成了徹底粉碎她現任的致命一擊。",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/bedroom_sleep.jpg",
+        drunkPhoneWithHoodie: true, // 床上睡覺背景 + 訊息截圖 + 灰衣老王
         nextNode: "ch5_dating"
       },
       ch5_dating: {
         speaker: "隔壁老王",
         text: "大耳狗毅然決然跟現任攤牌分手，名正言順地回到了我的懷抱。",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/hotel.jpg",
+        character: "assets/laowang_hoodie.png",
         nextNode: "ch5_happy_days"
       },
       ch5_happy_days: {
         speaker: "隔壁老王",
         text: "我們過了一段甜蜜的熱戀期，每天膩在一起，彷彿三年的空白從未存在過。",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/hotel.jpg", // 旅館背景
+        pounceScene: true,     // 比照之前旅館撲向大耳狗演出
         nextNode: "ch5_suancaiyu"
       },
       ch5_suancaiyu: {
         speaker: "隔壁老王",
         text: "身為偷家大師，我決定帶她去吃酸菜魚，正式介紹我的兩位至尊好友——",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/suancaiyu.jpg", // 酸小七酸菜魚店面
+        character: null,            // 不要有人
         nextNode: "ch5_friends_intro"
       },
       ch5_friends_intro: {
         speaker: "隔壁老王",
         text: "一位是戰鬥冰情聖『178 特級亞大熊男』，另一位則是全台中最帥的『西屯許光漢』。",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/suancaiyu.jpg",
+        suancaiyuDuo: true, // 熊男與西屯許光漢同台
         nextNode: "ch5_guanghan_talk"
       },
+
+      // 酸菜魚聚餐 (四人由左至右：大耳狗、小人得志老王、熊男、西屯許光漢；誰說話誰放大)
       ch5_guanghan_talk: {
         speaker: "西屯許光漢",
         text: "「老王，你這波回國偷家操作，比我抓的油頭還要滑順啊。」",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/suancaiyu.jpg",
+        groupScene: {
+          chars: ["dumbo", "laowang_smug", "bear", "guanghan"],
+          active: "guanghan"
+        },
         nextNode: "ch5_bear_talk"
       },
       ch5_bear_talk: {
         speaker: "178 特級亞大熊男",
         text: "「唉……雖然寶寶最後選了妳，但在我心裡，老王永遠是最棒的。」",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/suancaiyu.jpg",
+        groupScene: {
+          chars: ["dumbo", "laowang_smug", "bear", "guanghan"],
+          active: "bear"
+        },
         nextNode: "ch5_dumbo_confused"
       },
       ch5_dumbo_confused: {
         speaker: "大耳狗",
         text: "「……老王，你這兩個朋友看起來怎麼一個比你可靠，一個比你帥？」",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/suancaiyu.jpg",
+        groupScene: {
+          chars: ["dumbo", "laowang_smug", "bear", "guanghan"],
+          active: "dumbo"
+        },
         nextNode: "ch5_bill_choice"
       },
       ch5_bill_choice: {
         speaker: "隔壁老王",
         text: "酸菜魚吃得差不多了，服務生拿來了四位數的帳單……",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/suancaiyu.jpg",
+        groupScene: {
+          chars: ["dumbo", "laowang_smug", "bear", "guanghan"],
+          active: "laowang_smug"
+        },
         choices: [
           { text: "霸氣掏卡：這餐算我的！", nextNode: "ch5_pay_card" },
           { text: "假裝肚子痛，跑去廁所尿遁", nextNode: "ch5_pee_escape" }
@@ -1382,23 +1463,34 @@
       ch5_pay_card: {
         speaker: "隔壁老王",
         text: "我啪一聲把海外信用卡拍在桌上，大耳狗眼裡泛起崇拜的星星眼。",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/suancaiyu.jpg",
+        groupScene: {
+          chars: ["dumbo", "laowang_smug", "bear", "guanghan"],
+          active: "laowang_smug"
+        },
         nextNode: "ch6_departure"
       },
+
+      // 尿遁分支：老王不見（只剩大耳狗、熊男、許光漢三人）
       ch5_pee_escape: {
         speaker: "西屯許光漢",
         text: "「乾，老王你留澳留到連幾千塊酸菜魚都要尿遁？別把澳洲當藉口喔！」",
-        bg: "assets/room.jpg",
-        character: null,
+        bg: "assets/suancaiyu.jpg",
+        groupScene: {
+          chars: ["dumbo", "bear", "guanghan"],
+          active: "guanghan"
+        },
         unlockAchievement: "achieve_guanghan_sideeye",
         nextNode: "ch5_bear_save"
       },
       ch5_bear_save: {
         speaker: "隔壁老王",
         text: "最後由熊男苦笑著掏卡結帳。雖然社死，但省了一餐，老王依舊覺得自己血賺。",
-        bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/suancaiyu.jpg",
+        groupScene: {
+          chars: ["dumbo", "bear", "guanghan"],
+          active: null // 老王旁白，場上三人正常顯示
+        },
         nextNode: "ch6_departure"
       },
 
@@ -1585,6 +1677,14 @@
     const backBtn = document.getElementById("back-btn");
     const homeBtn = document.getElementById("home-btn");
 
+    // 角色立繪路徑映射
+    const CHAR_ASSET_MAP = {
+      dumbo: "assets/dumbo.png",
+      laowang_smug: "assets/laowang_smug.png",
+      bear: "assets/bear_char.png",
+      guanghan: "assets/guanghan.png"
+    };
+
     function updateVisualLayers(node) {
       if (node.bg) {
         if (currentBgSrc !== node.bg) {
@@ -1598,7 +1698,44 @@
       }
 
       // 演出模式分流
-      if (node.hugScene) {
+      if (node.groupScene) {
+        // 酸菜魚同台發言高亮模式
+        const { chars, active } = node.groupScene;
+        let html = '<div class="group-scene">';
+        chars.forEach(key => {
+          const isActive = key === active ? "speaker-active" : "";
+          html += `<img class="group-char ${isActive}" src="${CHAR_ASSET_MAP[key]}" alt="${key}">`;
+        });
+        html += '</div>';
+        charLayer.innerHTML = html;
+      } else if (node.suancaiyuDuo) {
+        // 酸菜魚：熊男與西屯許光漢二人並列
+        charLayer.innerHTML = `
+          <div class="duo-ice-scene">
+            <img class="duo-bear-left" src="assets/bear_char.png" alt="熊男">
+            <img class="duo-laowang-right" src="assets/guanghan.png" alt="西屯許光漢" style="transform: translateX(10%); max-height: 98%;">
+          </div>
+        `;
+      } else if (node.drunkPhoneWithHoodie) {
+        // 床上背景 + 醉酒通知截圖 + 灰衣帽踢老王
+        charLayer.innerHTML = `
+          <div class="drunk-phone-scene">
+            <img class="drunk-char-left" src="assets/laowang_hoodie.png" alt="灰衣老王">
+            <div class="drunk-phone-card" style="right: 12%;">
+              <img src="assets/ig_drunk_call.png" alt="IG通知截圖">
+            </div>
+          </div>
+        `;
+      } else if (node.drunkPhoneScene) {
+        // 床上背景 + 醉酒通知截圖 (居中)
+        charLayer.innerHTML = `
+          <div class="drunk-phone-scene">
+            <div class="drunk-phone-card">
+              <img src="assets/ig_drunk_call.png" alt="IG通知截圖">
+            </div>
+          </div>
+        `;
+      } else if (node.hugScene) {
         // 熊男深情環抱老王
         charLayer.innerHTML = `
           <div class="hug-scene">
@@ -1606,7 +1743,7 @@
           </div>
         `;
       } else if (node.duoIceSceneCry) {
-        // 戰鬥冰店：熊男在左、哭臉老王強制靠右
+        // 戰鬥冰店：熊男在左、哭臉老王靠右 (徹底錯開)
         charLayer.innerHTML = `
           <div class="duo-ice-scene">
             <img class="duo-bear-left" src="assets/bear_char.png" alt="熊男">
@@ -1614,7 +1751,7 @@
           </div>
         `;
       } else if (node.duoIceSceneHoodie) {
-        // 戰鬥冰店：熊男在左、灰衣帽踢老王強制靠右
+        // 戰鬥冰店：熊男在左、灰衣帽踢老王靠右
         charLayer.innerHTML = `
           <div class="duo-ice-scene">
             <img class="duo-bear-left" src="assets/bear_char.png" alt="熊男">
@@ -1657,7 +1794,6 @@
           </div>
         `;
       } else if (node.character) {
-        // 單立繪（支援 zoom 特寫放大）
         const zoomClass = node.charZoom ? "char-zoom" : "";
         charLayer.innerHTML = `<img class="single-char ${zoomClass}" src="${node.character}" alt="角色立繪">`;
         const img = charLayer.querySelector(".single-char");
