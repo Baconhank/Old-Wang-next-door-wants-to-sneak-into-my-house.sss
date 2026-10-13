@@ -203,6 +203,62 @@
       display: block;
     }
 
+    /* 戰鬥冰店：哭臉老王與熊男同屏對戲 */
+    .duo-ice-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .duo-laowang {
+      position: absolute;
+      left: 10%;
+      bottom: 0;
+      max-height: 95%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+      animation: fadeInChar 0.6s ease-out forwards;
+    }
+
+    .duo-bear {
+      position: absolute;
+      right: 8%;
+      bottom: 0;
+      max-height: 98%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+      animation: fadeInChar 0.6s ease-out forwards;
+    }
+
+    /* 熊男深情抱住老王 */
+    .hug-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+    }
+
+    .hug-char {
+      max-height: 98%;
+      object-fit: contain;
+      filter: drop-shadow(0 12px 25px rgba(0, 0, 0, 0.8));
+      animation: hugPulse 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes fadeInChar {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes hugPulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.03); }
+    }
+
     .overlay-screen {
       position: absolute;
       top: 0;
@@ -554,6 +610,7 @@
 
   <div id="game-container">
     <audio id="bgm-player" src="assets/bgm.mp3" loop preload="auto"></audio>
+    <audio id="bear-bgm-player" src="assets/bear_love_bgm.mp3" loop preload="auto"></audio>
 
     <div id="background-layer"></div>
 
@@ -605,22 +662,28 @@
   </div>
 
   <script>
-    // ===== 音訊控制系統 =====
+    // ===== 音訊控制系統 (支援多 BGM 播放器切換) =====
     const bgmPlayer = document.getElementById("bgm-player");
+    const bearBgmPlayer = document.getElementById("bear-bgm-player");
     const volumeSlider = document.getElementById("volume-slider");
 
     let audioCtx = null;
     let bgmGainNode = null;
     let bgmSourceNode = null;
+    let bearSourceNode = null;
+    let currentActiveBgm = bgmPlayer;
 
     function initAudioGraph() {
       if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContextClass();
         bgmGainNode = audioCtx.createGain();
-        bgmSourceNode = audioCtx.createMediaElementSource(bgmPlayer);
         
+        bgmSourceNode = audioCtx.createMediaElementSource(bgmPlayer);
+        bearSourceNode = audioCtx.createMediaElementSource(bearBgmPlayer);
+
         bgmSourceNode.connect(bgmGainNode);
+        bearSourceNode.connect(bgmGainNode);
         bgmGainNode.connect(audioCtx.destination);
       }
       if (audioCtx.state === "suspended") {
@@ -636,19 +699,25 @@
       }
     });
 
-    function playBgm() {
+    function playBgm(player = bgmPlayer) {
       initAudioGraph();
+      if (currentActiveBgm && currentActiveBgm !== player) {
+        currentActiveBgm.pause();
+        currentActiveBgm.currentTime = 0;
+      }
+      currentActiveBgm = player;
+
       const targetVol = parseFloat(volumeSlider.value);
       bgmGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
       bgmGainNode.gain.setValueAtTime(targetVol, audioCtx.currentTime);
 
-      if (bgmPlayer.paused) {
-        bgmPlayer.play().catch(err => console.warn("BGM 播放被瀏覽器限制", err));
+      if (player.paused) {
+        player.play().catch(err => console.warn("音訊播放受阻", err));
       }
     }
 
     function fadeOutBgm(duration = 2.5) {
-      if (!audioCtx || !bgmGainNode || bgmPlayer.paused) return;
+      if (!audioCtx || !bgmGainNode || !currentActiveBgm || currentActiveBgm.paused) return;
 
       const currTime = audioCtx.currentTime;
       const currVol = bgmGainNode.gain.value;
@@ -659,8 +728,10 @@
 
       setTimeout(() => {
         if (bgmGainNode.gain.value <= 0.05) {
-          bgmPlayer.pause();
-          bgmPlayer.currentTime = 0;
+          if (currentActiveBgm) {
+            currentActiveBgm.pause();
+            currentActiveBgm.currentTime = 0;
+          }
           bgmGainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
         }
       }, duration * 1000);
@@ -671,8 +742,8 @@
         bgmGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
         bgmGainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
       }
-      bgmPlayer.pause();
-      bgmPlayer.currentTime = 0;
+      if (bgmPlayer) { bgmPlayer.pause(); bgmPlayer.currentTime = 0; }
+      if (bearBgmPlayer) { bearBgmPlayer.pause(); bearBgmPlayer.currentTime = 0; }
     }
 
     function playPlaneLandingSound() {
@@ -893,7 +964,7 @@
         text: "「我沒想過三年後我還會因為你掉眼淚，好笑了」",
         bg: "assets/chat.jpg",
         character: null,
-        onEnter: () => playBgm(),
+        onEnter: () => playBgm(bgmPlayer),
         nextNode: "intro_8"
       },
       intro_8: {
@@ -1052,27 +1123,27 @@
         text: "心態徹底炸裂的我，氣得打開交友軟體找人療傷。",
         bg: "assets/wannan.jpg",
         character: "assets/laowang_cry.png",
-        charZoom: true, // 放大特寫老王哭臉
+        charZoom: true,
         nextNode: "event2_bear_msg"
       },
       event2_bear_msg: {
         speaker: "178 特級亞大熊男",
         text: "「寶寶，你終於肯理我了！想吃什麼？我都請你！」",
         bg: "assets/wannan.jpg",
-        bearMsgScene: true, // 哭臉老王 + 旁邊熊男 Grindr 訊息卡
+        bearMsgScene: true,
         nextNode: "event2_ice_shop"
       },
       event2_ice_shop: {
         speaker: "隔壁老王",
         text: "「走，去吃戰鬥冰。」",
         bg: "assets/wannan.jpg",
-        bearMsgScene: true, // 延續丸南背景與熊男訊息畫面
+        bearMsgScene: true,
         nextNode: "event2_ice_eating"
       },
       event2_ice_eating: {
         speaker: "隔壁老王",
         text: "在戰鬥冰的店裡，熊男溫柔地幫我挖著芒果，用深情的眼神看著滿腹委屈的我……",
-        bg: "assets/zhandoubing.jpg", // 戰鬥冰古早味綿綿冰背景
+        bg: "assets/zhandoubing.jpg",
         character: null,
         choices: [
           { text: "我還是放不下大耳狗", nextNode: "event3_start" },
@@ -1083,19 +1154,22 @@
         speaker: "隔壁老王",
         text: "大耳狗算什麼？眼前的 178 特級亞大熊男寬厚又體貼，還會餵我吃戰鬥冰。",
         bg: "assets/zhandoubing.jpg",
-        character: null,
+        duoIceScene: true, // 哭臉老王與熊男同屏對戲
         nextNode: "special_end_bear_2"
       },
       special_end_bear_2: {
         speaker: "178 特級亞大熊男",
         text: "「寶寶，以後你的下半生，交給我來照顧。」",
         bg: "assets/zhandoubing.jpg",
-        character: null,
+        hugScene: true, // 熊男深情環抱老王
+        onEnter: () => playBgm(bearBgmPlayer), // 播放「要愛愛」BGM
         nextNode: "special_end_bear_3"
       },
       special_end_bear_3: {
         speaker: "系統",
         text: "【特殊結局：跟熊男交往 被開發成騷0】\n那一夜，老王放下了偷家的執念，在大熊溫暖的懷抱中找到了全新自我。",
+        bg: "assets/zhandoubing.jpg",
+        hugScene: true, // 延續環抱畫面
         unlockAchievement: "achieve_bear_sub",
         onNext: () => returnToMenu()
       },
@@ -1174,7 +1248,7 @@
         text: "「老王……你睡了嗎？我剛跟朋友喝完酒……現在腦子裡全是你。」",
         bg: "assets/room.jpg",
         character: null,
-        onEnter: () => playBgm(),
+        onEnter: () => playBgm(bgmPlayer),
         nextNode: "event4_drunk2"
       },
       event4_drunk2: {
@@ -1478,8 +1552,23 @@
       }
 
       // 演出模式分流
-      if (node.storyReveal) {
-        // 丸南生魚片：老王 + 旁邊彈出限動卡片
+      if (node.hugScene) {
+        // 熊男背後深情擁抱哭臉老王
+        charLayer.innerHTML = `
+          <div class="hug-scene">
+            <img class="hug-char" src="assets/bear_hug_laowang.png" alt="熊男抱住老王">
+          </div>
+        `;
+      } else if (node.duoIceScene) {
+        // 戰鬥冰店：哭臉老王與熊男同台
+        charLayer.innerHTML = `
+          <div class="duo-ice-scene">
+            <img class="duo-laowang" src="assets/laowang_cry.png" alt="哭臉老王">
+            <img class="duo-bear" src="assets/bear_char.png" alt="熊男">
+          </div>
+        `;
+      } else if (node.storyReveal) {
+        // 丸南生魚片：老王 + 限動卡片
         charLayer.innerHTML = `
           <div class="story-reveal-scene">
             <img class="story-char" src="assets/laowang_hoodie.png" alt="隔壁老王">
@@ -1489,7 +1578,7 @@
           </div>
         `;
       } else if (node.bearMsgScene) {
-        // 丸南生魚片：哭臉老王 + 旁邊彈出熊男 Grindr 訊息卡片
+        // 丸南生魚片：哭臉老王 + 熊男 Grindr 訊息卡片
         charLayer.innerHTML = `
           <div class="bear-msg-scene">
             <img class="bear-scene-char" src="assets/laowang_cry.png" alt="哭臉老王">
