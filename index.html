@@ -50,7 +50,7 @@
       z-index: 1;
     }
 
-    /* 角色立繪與複雜同屏層 */
+    /* 角色立繪與演出層 */
     #character-layer {
       position: absolute;
       bottom: 0px;
@@ -203,7 +203,7 @@
       display: block;
     }
 
-    /* 戰鬥冰店：哭臉老王與熊男同屏對戲 */
+    /* 戰鬥冰店：左右站位對調 (熊男在左、老王在右) */
     .duo-ice-scene {
       position: relative;
       width: 100%;
@@ -212,27 +212,29 @@
       align-items: flex-end;
     }
 
-    .duo-laowang {
+    .duo-bear-left {
       position: absolute;
-      left: 10%;
-      bottom: 0;
-      max-height: 95%;
-      object-fit: contain;
-      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
-      animation: fadeInChar 0.6s ease-out forwards;
-    }
-
-    .duo-bear {
-      position: absolute;
-      right: 8%;
+      left: 6%;
       bottom: 0;
       max-height: 98%;
       object-fit: contain;
       filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
       animation: fadeInChar 0.6s ease-out forwards;
+      z-index: 3;
     }
 
-    /* 熊男深情抱住老王 */
+    .duo-laowang-right {
+      position: absolute;
+      right: 12%;
+      bottom: 0;
+      max-height: 95%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+      animation: fadeInChar 0.6s ease-out forwards;
+      z-index: 2;
+    }
+
+    /* 熊男深情環抱老王 */
     .hug-scene {
       position: relative;
       width: 100%;
@@ -247,6 +249,29 @@
       object-fit: contain;
       filter: drop-shadow(0 12px 25px rgba(0, 0, 0, 0.8));
       animation: hugPulse 2s ease-in-out infinite alternate;
+    }
+
+    /* 生氣小貓彈出卡片 */
+    .angry-cat-scene {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .angry-cat-img {
+      max-height: 85%;
+      max-width: 85%;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 0 3px #ef4444;
+      animation: catAngerShake 0.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes catAngerShake {
+      0% { transform: scale(1) rotate(-1deg); }
+      100% { transform: scale(1.03) rotate(1.5deg); }
     }
 
     @keyframes fadeInChar {
@@ -662,13 +687,15 @@
   </div>
 
   <script>
-    // ===== 音訊控制系統 (支援多 BGM 播放器切換) =====
+    // ===== 音訊控制系統 (要愛愛降低40%音量 = 0.6 乘數) =====
     const bgmPlayer = document.getElementById("bgm-player");
     const bearBgmPlayer = document.getElementById("bear-bgm-player");
     const volumeSlider = document.getElementById("volume-slider");
 
     let audioCtx = null;
+    let masterGainNode = null;
     let bgmGainNode = null;
+    let bearGainNode = null;
     let bgmSourceNode = null;
     let bearSourceNode = null;
     let currentActiveBgm = bgmPlayer;
@@ -677,14 +704,24 @@
       if (!audioCtx) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContextClass();
+
+        masterGainNode = audioCtx.createGain();
+        masterGainNode.connect(audioCtx.destination);
+
         bgmGainNode = audioCtx.createGain();
-        
+        bgmGainNode.gain.setValueAtTime(1.0, audioCtx.currentTime);
+        bgmGainNode.connect(masterGainNode);
+
+        // 熊男要愛愛音樂降低 40% 音量 (設為 0.6)
+        bearGainNode = audioCtx.createGain();
+        bearGainNode.gain.setValueAtTime(0.6, audioCtx.currentTime);
+        bearGainNode.connect(masterGainNode);
+
         bgmSourceNode = audioCtx.createMediaElementSource(bgmPlayer);
         bearSourceNode = audioCtx.createMediaElementSource(bearBgmPlayer);
 
         bgmSourceNode.connect(bgmGainNode);
-        bearSourceNode.connect(bgmGainNode);
-        bgmGainNode.connect(audioCtx.destination);
+        bearSourceNode.connect(bearGainNode);
       }
       if (audioCtx.state === "suspended") {
         audioCtx.resume();
@@ -693,9 +730,9 @@
 
     volumeSlider.addEventListener("input", (e) => {
       const vol = parseFloat(e.target.value);
-      if (bgmGainNode && audioCtx) {
-        bgmGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-        bgmGainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+      if (masterGainNode && audioCtx) {
+        masterGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+        masterGainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
       }
     });
 
@@ -708,8 +745,8 @@
       currentActiveBgm = player;
 
       const targetVol = parseFloat(volumeSlider.value);
-      bgmGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-      bgmGainNode.gain.setValueAtTime(targetVol, audioCtx.currentTime);
+      masterGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+      masterGainNode.gain.setValueAtTime(targetVol, audioCtx.currentTime);
 
       if (player.paused) {
         player.play().catch(err => console.warn("音訊播放受阻", err));
@@ -717,30 +754,30 @@
     }
 
     function fadeOutBgm(duration = 2.5) {
-      if (!audioCtx || !bgmGainNode || !currentActiveBgm || currentActiveBgm.paused) return;
+      if (!audioCtx || !masterGainNode || !currentActiveBgm || currentActiveBgm.paused) return;
 
       const currTime = audioCtx.currentTime;
-      const currVol = bgmGainNode.gain.value;
+      const currVol = masterGainNode.gain.value;
 
-      bgmGainNode.gain.cancelScheduledValues(currTime);
-      bgmGainNode.gain.setValueAtTime(currVol, currTime);
-      bgmGainNode.gain.linearRampToValueAtTime(0.0001, currTime + duration);
+      masterGainNode.gain.cancelScheduledValues(currTime);
+      masterGainNode.gain.setValueAtTime(currVol, currTime);
+      masterGainNode.gain.linearRampToValueAtTime(0.0001, currTime + duration);
 
       setTimeout(() => {
-        if (bgmGainNode.gain.value <= 0.05) {
+        if (masterGainNode.gain.value <= 0.05) {
           if (currentActiveBgm) {
             currentActiveBgm.pause();
             currentActiveBgm.currentTime = 0;
           }
-          bgmGainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
+          masterGainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
         }
       }, duration * 1000);
     }
 
     function stopBgmInstant() {
-      if (audioCtx && bgmGainNode) {
-        bgmGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-        bgmGainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
+      if (audioCtx && masterGainNode) {
+        masterGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+        masterGainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
       }
       if (bgmPlayer) { bgmPlayer.pause(); bgmPlayer.currentTime = 0; }
       if (bearBgmPlayer) { bearBgmPlayer.pause(); bearBgmPlayer.currentTime = 0; }
@@ -1154,7 +1191,7 @@
         speaker: "隔壁老王",
         text: "大耳狗算什麼？眼前的 178 特級亞大熊男寬厚又體貼，還會餵我吃戰鬥冰。",
         bg: "assets/zhandoubing.jpg",
-        duoIceScene: true,
+        duoIceSceneSwapped: true, // 左右對調：熊男在左、哭臉老王在右
         nextNode: "special_end_bear_2"
       },
       special_end_bear_2: {
@@ -1174,33 +1211,33 @@
         onNext: () => returnToMenu()
       },
 
-      // --- 事件三 ---
+      // --- 事件三 (戰鬥冰店延續、灰衣老王與熊男同台) ---
       event3_start: {
         speaker: "隔壁老王",
         text: "不行，把輸家當早餐吃的我，絕不能在戰鬥冰店認輸！",
-        bg: "assets/airport.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/zhandoubing.jpg", // 改為戰鬥冰背景
+        duoHoodieAndBear: true,       // 灰衣老王與熊男同台
         nextNode: "event3_movie_msg"
       },
       event3_movie_msg: {
         speaker: "隔壁老王",
         text: "過了一週，聽說《瘋狂動物城》重映，我傳訊息約她：『週六瘋狂動物城，去不去？』",
-        bg: "assets/airport.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/zhandoubing.jpg",
+        duoHoodieAndBear: true,
         nextNode: "event3_reject_first"
       },
       event3_reject_first: {
         speaker: "大耳狗",
         text: "「不行啦，我男友會看定位，而且我們現在感情很好。」",
-        bg: "assets/airport.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/zhandoubing.jpg",
+        duoHoodieAndBear: true,
         nextNode: "event3_bad_girl"
       },
       event3_bad_girl: {
         speaker: "大耳狗",
         text: "「……但偶爾，我也想當個壞女人。幾點？哪家影城？」",
-        bg: "assets/airport.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/zhandoubing.jpg",
+        duoHoodieAndBear: true,
         choices: [
           { text: "準時赴約，享受刺激", nextNode: "event4_start" },
           { text: "嚴肅拒絕：請好好珍惜妳男友", nextNode: "righteous_end" }
@@ -1209,20 +1246,22 @@
       righteous_end: {
         speaker: "隔壁老王",
         text: "「妳這樣做對得起妳男友嗎？我雖然愛玩，但也是有底線的。電影妳自己看吧。」",
-        bg: "assets/airport.jpg",
-        character: "assets/laowang.png",
+        bg: "assets/zhandoubing.jpg", // 戰鬥冰背景
+        character: "assets/laowang_smug.png", // 小人得志老王
         nextNode: "righteous_end_2"
       },
       righteous_end_2: {
         speaker: "大耳狗",
         text: "「……你居然教訓我？算我看錯你了，掰掰！」",
-        bg: "assets/airport.jpg",
-        character: null,
+        bg: "assets/zhandoubing.jpg",
+        angryCatScene: true, // 生氣小貓圖
         nextNode: "righteous_end_3"
       },
       righteous_end_3: {
         speaker: "系統",
         text: "【章節結束：正直的男人】\n你用浩然正氣擊退了壞女人大耳狗，榮耀或許沒奪回，但道德標桿立得高高的。",
+        bg: "assets/zhandoubing.jpg", // 維持戰鬥冰背景
+        character: "assets/laowang_smug.png", // 小人得志老王立繪
         unlockAchievement: "achieve_righteous",
         onNext: () => returnToMenu()
       },
@@ -1553,19 +1592,37 @@
 
       // 演出模式分流
       if (node.hugScene) {
+        // 熊男深情環抱老王
         charLayer.innerHTML = `
           <div class="hug-scene">
             <img class="hug-char" src="assets/bear_hug_laowang.png" alt="熊男抱住老王">
           </div>
         `;
-      } else if (node.duoIceScene) {
+      } else if (node.duoIceSceneSwapped) {
+        // 左右站位對調：熊男在左、哭臉老王在右
         charLayer.innerHTML = `
           <div class="duo-ice-scene">
-            <img class="duo-laowang" src="assets/laowang_cry.png" alt="哭臉老王">
-            <img class="duo-bear" src="assets/bear_char.png" alt="熊男">
+            <img class="duo-bear-left" src="assets/bear_char.png" alt="熊男">
+            <img class="duo-laowang-right" src="assets/laowang_cry.png" alt="哭臉老王">
+          </div>
+        `;
+      } else if (node.duoHoodieAndBear) {
+        // 戰鬥冰店：灰衣帽踢老王與熊男同台
+        charLayer.innerHTML = `
+          <div class="duo-ice-scene">
+            <img class="duo-bear-left" src="assets/bear_char.png" alt="熊男">
+            <img class="duo-laowang-right" src="assets/laowang_hoodie.png" alt="灰衣老王">
+          </div>
+        `;
+      } else if (node.angryCatScene) {
+        // 生氣小貓圖
+        charLayer.innerHTML = `
+          <div class="angry-cat-scene">
+            <img class="angry-cat-img" src="assets/angry_cat.jpg" alt="生氣大耳狗小貓">
           </div>
         `;
       } else if (node.storyReveal) {
+        // 丸南生魚片：老王 + 限動卡片
         charLayer.innerHTML = `
           <div class="story-reveal-scene">
             <img class="story-char" src="assets/laowang_hoodie.png" alt="隔壁老王">
@@ -1575,6 +1632,7 @@
           </div>
         `;
       } else if (node.bearMsgScene) {
+        // 丸南生魚片：哭臉老王 + 熊男 Grindr 訊息卡片
         charLayer.innerHTML = `
           <div class="bear-msg-scene">
             <img class="bear-scene-char" src="assets/laowang_cry.png" alt="哭臉老王">
@@ -1584,6 +1642,7 @@
           </div>
         `;
       } else if (node.pounceScene) {
+        // 旅館：老王撲向大耳狗
         charLayer.innerHTML = `
           <div class="pounce-scene">
             <img class="pounce-target" src="assets/dumbo.png" alt="大耳狗">
@@ -1591,6 +1650,7 @@
           </div>
         `;
       } else if (node.character) {
+        // 單立繪（支援 zoom 特寫放大）
         const zoomClass = node.charZoom ? "char-zoom" : "";
         charLayer.innerHTML = `<img class="single-char ${zoomClass}" src="${node.character}" alt="角色立繪">`;
         const img = charLayer.querySelector(".single-char");
@@ -1771,7 +1831,7 @@
       goBack();
     });
 
-    // ===== 推進核心與鍵盤方向鍵右鍵監聽 =====
+    // ===== 推進核心與鍵盤方向鍵右鍵監聽 (點按推進、長按高頻快速跳過) =====
     function advanceDialogue() {
       if (!startMenu.classList.contains("hidden") || !achieveScreen.classList.contains("hidden")) {
         return;
