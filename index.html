@@ -44,7 +44,7 @@
       width: 100%;
       height: 100%;
       background-size: cover;
-      background-position: center center; /* 自動置中縮放 */
+      background-position: center center;
       opacity: 0;
       transition: opacity 0.8s ease-in-out;
       z-index: 1;
@@ -56,7 +56,7 @@
       bottom: 0px;
       left: 0;
       width: 100%;
-      height: 82%;
+      height: 85%;
       pointer-events: none;
       display: flex;
       align-items: flex-end;
@@ -235,6 +235,18 @@
       z-index: 4;
     }
 
+    /* 酸菜魚介紹雙人站位：許光漢內縮靠左不被遮擋 */
+    .duo-guanghan-intro {
+      position: absolute;
+      right: 4%;
+      bottom: 0;
+      max-height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+      animation: fadeInChar 0.6s ease-out forwards;
+      z-index: 3;
+    }
+
     @keyframes fadeInCharRight {
       from { opacity: 0; transform: translateX(35%); }
       to { opacity: 1; transform: translateX(20%); }
@@ -280,8 +292,8 @@
       100% { transform: scale(1.03) rotate(1.5deg); }
     }
 
-    /* 醉酒電話彈出訊息截圖場景 (支援同時放灰衣老王) */
-    .drunk-phone-scene {
+    /* 彈出手機卡片場景（支援居中或左人右卡） */
+    .phone-pop-scene {
       position: relative;
       width: 100%;
       height: 100%;
@@ -290,9 +302,9 @@
       justify-content: center;
     }
 
-    .drunk-phone-card {
+    .pop-card {
       position: absolute;
-      top: 6%;
+      top: 5%;
       height: 85%;
       border-radius: 28px;
       overflow: hidden;
@@ -301,24 +313,24 @@
       z-index: 5;
     }
 
-    .drunk-phone-card img {
+    .pop-card img {
       height: 100%;
       width: auto;
       display: block;
     }
 
-    .drunk-char-left {
+    .pop-char-left {
       position: absolute;
       left: 4%;
       bottom: 0;
-      max-height: 95%;
+      max-height: 98%;
       object-fit: contain;
       filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
       animation: fadeInChar 0.5s ease-out forwards;
       z-index: 4;
     }
 
-    /* 酸菜魚同台：支援 2~4 人發言高亮動態放大縮小 */
+    /* 酸菜魚同台：放大尺寸、比例加寬、誰說話誰放大 */
     .group-scene {
       position: relative;
       width: 100%;
@@ -326,12 +338,12 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-around;
-      padding: 0 10px;
+      padding: 0 4px;
     }
 
     .group-char {
-      max-height: 88%;
-      max-width: 26%;
+      max-height: 95%;
+      max-width: 32%;
       object-fit: contain;
       transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
       filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6)) brightness(0.8);
@@ -339,12 +351,11 @@
       transform-origin: bottom center;
     }
 
-    /* 說話者高亮放大 */
     .group-char.speaker-active {
-      max-height: 96%;
+      max-height: 102%;
       filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.8)) brightness(1.05);
       opacity: 1;
-      transform: scale(1.15) translateY(-8px);
+      transform: scale(1.18) translateY(-10px);
       z-index: 10;
     }
 
@@ -710,6 +721,8 @@
   <div id="game-container">
     <audio id="bgm-player" src="assets/bgm.mp3" loop preload="auto"></audio>
     <audio id="bear-bgm-player" src="assets/bear_love_bgm.mp3" loop preload="auto"></audio>
+    <audio id="memory-vortex-player" src="assets/memory_vortex.mp3" loop preload="auto"></audio>
+    <audio id="distance-love-player" src="assets/distance_love.mp3" loop preload="auto"></audio>
 
     <div id="background-layer"></div>
 
@@ -761,17 +774,15 @@
   </div>
 
   <script>
-    // ===== 音訊控制系統 (要愛愛降低40%音量 = 0.6 基礎倍率) =====
+    // ===== 音訊控制系統 =====
     const bgmPlayer = document.getElementById("bgm-player");
     const bearBgmPlayer = document.getElementById("bear-bgm-player");
+    const memoryVortexPlayer = document.getElementById("memory-vortex-player");
+    const distanceLovePlayer = document.getElementById("distance-love-player");
     const volumeSlider = document.getElementById("volume-slider");
 
     let audioCtx = null;
     let masterGainNode = null;
-    let bgmGainNode = null;
-    let bearGainNode = null;
-    let bgmSourceNode = null;
-    let bearSourceNode = null;
     let currentActiveBgm = bgmPlayer;
 
     function initAudioGraph() {
@@ -782,20 +793,20 @@
         masterGainNode = audioCtx.createGain();
         masterGainNode.connect(audioCtx.destination);
 
-        bgmGainNode = audioCtx.createGain();
-        bgmGainNode.gain.setValueAtTime(1.0, audioCtx.currentTime);
-        bgmGainNode.connect(masterGainNode);
+        function setupSource(element, baseGain = 1.0) {
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.setValueAtTime(baseGain, audioCtx.currentTime);
+          gainNode.connect(masterGainNode);
+          const source = audioCtx.createMediaElementSource(element);
+          source.connect(gainNode);
+          return gainNode;
+        }
 
+        setupSource(bgmPlayer, 1.0);
         // 熊男要愛愛音樂降低 40% 音量 (設為 0.6)
-        bearGainNode = audioCtx.createGain();
-        bearGainNode.gain.setValueAtTime(0.6, audioCtx.currentTime);
-        bearGainNode.connect(masterGainNode);
-
-        bgmSourceNode = audioCtx.createMediaElementSource(bgmPlayer);
-        bearSourceNode = audioCtx.createMediaElementSource(bearBgmPlayer);
-
-        bgmSourceNode.connect(bgmGainNode);
-        bearSourceNode.connect(bearGainNode);
+        setupSource(bearBgmPlayer, 0.6);
+        setupSource(memoryVortexPlayer, 1.0);
+        setupSource(distanceLovePlayer, 1.0);
       }
       if (audioCtx.state === "suspended") {
         audioCtx.resume();
@@ -812,10 +823,13 @@
 
     function playBgm(player = bgmPlayer) {
       initAudioGraph();
-      if (currentActiveBgm && currentActiveBgm !== player) {
-        currentActiveBgm.pause();
-        currentActiveBgm.currentTime = 0;
-      }
+      const allPlayers = [bgmPlayer, bearBgmPlayer, memoryVortexPlayer, distanceLovePlayer];
+      allPlayers.forEach(p => {
+        if (p !== player) {
+          p.pause();
+          p.currentTime = 0;
+        }
+      });
       currentActiveBgm = player;
 
       const targetVol = parseFloat(volumeSlider.value);
@@ -853,8 +867,10 @@
         masterGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
         masterGainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
       }
-      if (bgmPlayer) { bgmPlayer.pause(); bgmPlayer.currentTime = 0; }
-      if (bearBgmPlayer) { bearBgmPlayer.pause(); bearBgmPlayer.currentTime = 0; }
+      [bgmPlayer, bearBgmPlayer, memoryVortexPlayer, distanceLovePlayer].forEach(p => {
+        p.pause();
+        p.currentTime = 0;
+      });
     }
 
     function playPlaneLandingSound() {
@@ -1340,11 +1356,11 @@
         onNext: () => returnToMenu()
       },
 
-      // --- 事件四：床上睡覺視角、未接來電彈出、灰衣老王 ---
+      // --- 事件四：床上睡覺視角、回憶的漩渦、未接來電彈出、灰衣老王 ---
       event4_start: {
         speaker: "隔壁老王",
         text: "電影散場後的那個週末，凌晨兩點。",
-        bg: "assets/bedroom_sleep.jpg", // 床上睡覺背景
+        bg: "assets/bedroom_sleep.jpg", // 床上睡覺背景（自動置中縮放）
         character: null,
         nextNode: "event4_vibe"
       },
@@ -1360,22 +1376,31 @@
         speaker: "大耳狗",
         text: "「老王……你睡了嗎？我剛跟朋友喝完酒……現在腦子裡全是你。」",
         bg: "assets/bedroom_sleep.jpg",
-        drunkPhoneScene: true, // 彈出 123.jpg 通知截圖
-        onEnter: () => playBgm(bgmPlayer),
+        popCardScene: {
+          cardImg: "assets/ig_drunk_call.png",
+          charImg: null // 純手機卡片居中
+        },
+        onEnter: () => playBgm(memoryVortexPlayer), // 播放《回憶的漩渦》
         nextNode: "event4_drunk2"
       },
       event4_drunk2: {
         speaker: "大耳狗",
         text: "「我好想你……」",
         bg: "assets/bedroom_sleep.jpg",
-        drunkPhoneScene: true,
+        popCardScene: {
+          cardImg: "assets/ig_drunk_call.png",
+          charImg: null
+        },
         nextNode: "event4_drunk3"
       },
       event4_drunk3: {
         speaker: "大耳狗",
         text: "「我承認……我喝醉那天，我也動搖了。」",
         bg: "assets/bedroom_sleep.jpg",
-        drunkPhoneScene: true,
+        popCardScene: {
+          cardImg: "assets/ig_drunk_call.png",
+          charImg: null
+        },
         nextNode: "ch5_together"
       },
 
@@ -1384,7 +1409,10 @@
         speaker: "隔壁老王",
         text: "那通醉醺醺的電話，成了徹底粉碎她現任的致命一擊。",
         bg: "assets/bedroom_sleep.jpg",
-        drunkPhoneWithHoodie: true, // 床上睡覺背景 + 訊息截圖 + 灰衣老王
+        popCardScene: {
+          cardImg: "assets/ig_drunk_call.png",
+          charImg: "assets/laowang_hoodie.png" // 左側灰衣老王 + 右側訊息截圖
+        },
         nextNode: "ch5_dating"
       },
       ch5_dating: {
@@ -1405,14 +1433,14 @@
         speaker: "隔壁老王",
         text: "身為偷家大師，我決定帶她去吃酸菜魚，正式介紹我的兩位至尊好友——",
         bg: "assets/suancaiyu.jpg", // 酸小七酸菜魚店面
-        character: null,            // 不要有人
+        character: null,            // 不要有人（空景）
         nextNode: "ch5_friends_intro"
       },
       ch5_friends_intro: {
         speaker: "隔壁老王",
         text: "一位是戰鬥冰情聖『178 特級亞大熊男』，另一位則是全台中最帥的『西屯許光漢』。",
         bg: "assets/suancaiyu.jpg",
-        suancaiyuDuo: true, // 熊男與西屯許光漢同台
+        suancaiyuIntroDuo: true, // 熊男靠左、許光漢靠右不被遮擋
         nextNode: "ch5_guanghan_talk"
       },
 
@@ -1471,7 +1499,7 @@
         nextNode: "ch6_departure"
       },
 
-      // 尿遁分支：老王不見（只剩大耳狗、熊男、許光漢三人）
+      // 尿遁分支：老王尿遁不在場（只剩大耳狗、熊男、許光漢三人）
       ch5_pee_escape: {
         speaker: "西屯許光漢",
         text: "「乾，老王你留澳留到連幾千塊酸菜魚都要尿遁？別把澳洲當藉口喔！」",
@@ -1489,7 +1517,7 @@
         bg: "assets/suancaiyu.jpg",
         groupScene: {
           chars: ["dumbo", "bear", "guanghan"],
-          active: null // 老王旁白，場上三人正常顯示
+          active: null
         },
         nextNode: "ch6_departure"
       },
@@ -1520,7 +1548,7 @@
         speaker: "大耳狗",
         text: "「不只要看袋鼠，我還要看你的澳洲大香腸！」",
         bg: "assets/airport.jpg",
-        character: null,
+        character: "assets/dumbo.png", // 加入大耳狗立繪
         nextNode: "ch6_back_australia"
       },
       ch6_back_australia: {
@@ -1535,14 +1563,14 @@
         speaker: "隔壁老王",
         text: "然而，現實的耳光總是來得又快又響。才剛過三個禮拜……",
         bg: "assets/room.jpg",
-        character: null,
+        character: "assets/laowang.png", // 加入白衣老王
         nextNode: "ch6_breakup_vibe"
       },
       ch6_breakup_vibe: {
         speaker: "隔壁老王",
         text: "手機在漆黑的房間裡震動，跳出了一段滿滿負能量的長篇小作文。",
         bg: "assets/room.jpg",
-        character: null,
+        character: "assets/laowang.png",
         onEnter: () => playPhoneVibrateSound(),
         nextNode: "ch6_dumbo_breakup"
       },
@@ -1550,21 +1578,22 @@
         speaker: "大耳狗",
         text: "「老王……我真的撐不下去了。時差跟遠距離讓我好沒安全感，我們還是分手吧。」",
         bg: "assets/room.jpg",
-        character: null,
+        character: "assets/laowang_white_cry.png", // 出現哭臉白衣老王
+        onEnter: () => playBgm(distanceLovePlayer), // 播放《愛能克服遠距離》
         nextNode: "ch6_blocked"
       },
       ch6_blocked: {
         speaker: "隔壁老王",
         text: "下一秒，紅色的驚嘆號亮起。我，隔壁老王，再次被大耳狗踢出了生命。",
         bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        character: "assets/laowang_white_cry.png",
         nextNode: "ch6_climax_choice"
       },
       ch6_climax_choice: {
         speaker: "隔壁老王",
         text: "看著窗外冰冷的異國街道，三年執念終成一場笑話。此時此刻，我該怎麼辦？",
         bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        character: "assets/laowang_white_cry.png",
         choices: [
           { text: "原地崩潰，當個深情 Emo 小丑", nextNode: "end_alone" },
           { text: "點開 WeChat，回覆 Angeline 的訊息", nextNode: "end_angeline_1" }
@@ -1576,14 +1605,14 @@
         speaker: "隔壁老王",
         text: "我關掉手機螢幕，默默抱著床頭的袋鼠玩偶縮在沙發角落。",
         bg: "assets/room.jpg",
-        character: null,
+        character: "assets/laowang_white_cry.png",
         nextNode: "end_alone_2"
       },
       end_alone_2: {
         speaker: "隔壁老王",
         text: "榮耀沒了，大耳狗跑了，大香腸也沒人看了，連巷口的當歸鴨肉飯都吃不到。",
         bg: "assets/room.jpg",
-        character: null,
+        character: "assets/laowang_white_cry.png",
         nextNode: "end_alone_3"
       },
       end_alone_3: {
@@ -1627,21 +1656,27 @@
         speaker: "Angeline",
         text: "「滾啦！你這個消失一個月回國偷家的臭渣男！老娘才不跟你約！」",
         bg: "assets/room.jpg",
-        character: null,
+        popCardScene: {
+          cardImg: "assets/wechat_angeline.png",
+          charImg: "assets/laowang_white_cry.png" // 白衣哭臉老王 + WeChat截圖
+        },
         nextNode: "end_angeline_reply_2"
       },
       end_angeline_reply_2: {
         speaker: "Angeline",
         text: "「我已經買好機票飛去台灣找『西屯許光漢』了，他才是全球最深情、最頂級的男人！」",
         bg: "assets/room.jpg",
-        character: null,
+        popCardScene: {
+          cardImg: "assets/wechat_angeline.png",
+          charImg: "assets/laowang_white_cry.png"
+        },
         nextNode: "end_angeline_cuckold"
       },
       end_angeline_cuckold: {
         speaker: "隔壁老王",
         text: "……蛤？？？？？？連 Angeline 都被西屯許光漢給偷了？？？",
         bg: "assets/room.jpg",
-        character: "assets/laowang.png",
+        character: "assets/laowang_white_cry.png",
         nextNode: "end_angeline_final"
       },
       end_angeline_final: {
@@ -1677,7 +1712,6 @@
     const backBtn = document.getElementById("back-btn");
     const homeBtn = document.getElementById("home-btn");
 
-    // 角色立繪路徑映射
     const CHAR_ASSET_MAP = {
       dumbo: "assets/dumbo.png",
       laowang_smug: "assets/laowang_smug.png",
@@ -1699,7 +1733,6 @@
 
       // 演出模式分流
       if (node.groupScene) {
-        // 酸菜魚同台發言高亮模式
         const { chars, active } = node.groupScene;
         let html = '<div class="group-scene">';
         chars.forEach(key => {
@@ -1708,42 +1741,41 @@
         });
         html += '</div>';
         charLayer.innerHTML = html;
-      } else if (node.suancaiyuDuo) {
-        // 酸菜魚：熊男與西屯許光漢二人並列
+      } else if (node.suancaiyuIntroDuo) {
+        // 酸菜魚雙人介紹：熊男靠左，西屯許光漢內縮靠右（不被邊緣遮擋）
         charLayer.innerHTML = `
           <div class="duo-ice-scene">
             <img class="duo-bear-left" src="assets/bear_char.png" alt="熊男">
-            <img class="duo-laowang-right" src="assets/guanghan.png" alt="西屯許光漢" style="transform: translateX(10%); max-height: 98%;">
+            <img class="duo-guanghan-intro" src="assets/guanghan.png" alt="西屯許光漢">
           </div>
         `;
-      } else if (node.drunkPhoneWithHoodie) {
-        // 床上背景 + 醉酒通知截圖 + 灰衣帽踢老王
-        charLayer.innerHTML = `
-          <div class="drunk-phone-scene">
-            <img class="drunk-char-left" src="assets/laowang_hoodie.png" alt="灰衣老王">
-            <div class="drunk-phone-card" style="right: 12%;">
-              <img src="assets/ig_drunk_call.png" alt="IG通知截圖">
+      } else if (node.popCardScene) {
+        const { cardImg, charImg } = node.popCardScene;
+        if (charImg) {
+          charLayer.innerHTML = `
+            <div class="phone-pop-scene">
+              <img class="pop-char-left" src="${charImg}" alt="角色">
+              <div class="pop-card" style="right: 12%;">
+                <img src="${cardImg}" alt="手機通知">
+              </div>
             </div>
-          </div>
-        `;
-      } else if (node.drunkPhoneScene) {
-        // 床上背景 + 醉酒通知截圖 (居中)
-        charLayer.innerHTML = `
-          <div class="drunk-phone-scene">
-            <div class="drunk-phone-card">
-              <img src="assets/ig_drunk_call.png" alt="IG通知截圖">
+          `;
+        } else {
+          charLayer.innerHTML = `
+            <div class="phone-pop-scene">
+              <div class="pop-card">
+                <img src="${cardImg}" alt="手機通知">
+              </div>
             </div>
-          </div>
-        `;
+          `;
+        }
       } else if (node.hugScene) {
-        // 熊男深情環抱老王
         charLayer.innerHTML = `
           <div class="hug-scene">
             <img class="hug-char" src="assets/bear_hug_laowang.png" alt="熊男抱住老王">
           </div>
         `;
       } else if (node.duoIceSceneCry) {
-        // 戰鬥冰店：熊男在左、哭臉老王靠右 (徹底錯開)
         charLayer.innerHTML = `
           <div class="duo-ice-scene">
             <img class="duo-bear-left" src="assets/bear_char.png" alt="熊男">
@@ -1751,7 +1783,6 @@
           </div>
         `;
       } else if (node.duoIceSceneHoodie) {
-        // 戰鬥冰店：熊男在左、灰衣帽踢老王靠右
         charLayer.innerHTML = `
           <div class="duo-ice-scene">
             <img class="duo-bear-left" src="assets/bear_char.png" alt="熊男">
@@ -1759,14 +1790,12 @@
           </div>
         `;
       } else if (node.angryCatScene) {
-        // 生氣小貓圖
         charLayer.innerHTML = `
           <div class="angry-cat-scene">
             <img class="angry-cat-img" src="assets/angry_cat.jpg" alt="生氣大耳狗小貓">
           </div>
         `;
       } else if (node.storyReveal) {
-        // 丸南生魚片：老王 + 限動卡片
         charLayer.innerHTML = `
           <div class="story-reveal-scene">
             <img class="story-char" src="assets/laowang_hoodie.png" alt="隔壁老王">
@@ -1776,7 +1805,6 @@
           </div>
         `;
       } else if (node.bearMsgScene) {
-        // 丸南生魚片：哭臉老王 + 熊男 Grindr 訊息卡片
         charLayer.innerHTML = `
           <div class="bear-msg-scene">
             <img class="bear-scene-char" src="assets/laowang_cry.png" alt="哭臉老王">
@@ -1786,7 +1814,6 @@
           </div>
         `;
       } else if (node.pounceScene) {
-        // 旅館：老王撲向大耳狗
         charLayer.innerHTML = `
           <div class="pounce-scene">
             <img class="pounce-target" src="assets/dumbo.png" alt="大耳狗">
@@ -1974,7 +2001,7 @@
       goBack();
     });
 
-    // ===== 鍵盤右鍵前進與長按高頻快進系統 =====
+    // ===== 鍵盤右鍵單按推進、長按高頻快進 =====
     function advanceDialogue() {
       if (!startMenu.classList.contains("hidden") || !achieveScreen.classList.contains("hidden")) {
         return;
